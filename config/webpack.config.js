@@ -89,12 +89,25 @@ const hasJsxRuntime = (() => {
 
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
+// 这是生产和开发配置
+// 它专注于开发人员体验，快速重建最小的包
 module.exports = function (webpackEnv) {
   const isEnvDevelopment = webpackEnv === 'development';
-  const isEnvProduction = webpackEnv === 'production';
+  // const isEnvProduction = webpackEnv === 'production';
+  const isEnvProduction =
+    webpackEnv === "production" || webpackEnv === "release";
+  console.log(paths.appBuild, "00000000000000000000000000000000");
+
+  //////----- add by nutsjian
+  // 多环境变量出口文件路径
+  // 做好了这里，我们就思考 webpackEnv 从哪来的，在哪传参的？
+  // 在 scripts/build.js 中找到
+  paths.appBuild = paths.appBuild + "/" + webpackEnv;
 
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command
+  // 用于生产环境中启用分析的变量
+  // 传入别名对象，如果传递到构建命令，则使用标志
   const isEnvProductionProfile =
     isEnvProduction && process.argv.includes('--profile');
 
@@ -206,17 +219,22 @@ module.exports = function (webpackEnv) {
         : paths.appIndexJs,
     output: {
       // The build folder.
+      // 出口建立文件夹，正式或测试时生成打包文件，否则只编译
+      // 这里的出口文件是 paths.appBuild，我们去看下 paths.js 文件
       path: isEnvProduction ? paths.appBuild : undefined,
       // Add /* filename */ comments to generated require()s in the output.
       pathinfo: isEnvDevelopment,
       // There will be one main bundle, and one file per asynchronous chunk.
       // In development, it does not produce real files.
+      // 每个异步块会有一个主包和一个文件
+      // 在开发过程中，它不会生成真正的文件
       filename: isEnvProduction
         ? 'static/js/[name].[contenthash:8].js'
         : isEnvDevelopment && 'static/js/bundle.js',
       // TODO: remove this when upgrading to webpack 5
       futureEmitAssets: true,
       // There are also additional JS chunk files if you use code splitting.
+      // 如果使用代码分割，还有其它 JS 文件
       chunkFilename: isEnvProduction
         ? 'static/js/[name].[contenthash:8].chunk.js'
         : isEnvDevelopment && 'static/js/[name].chunk.js',

@@ -36,6 +36,14 @@ const chalk = require('react-dev-utils/chalk');
 const fs = require('fs-extra');
 const bfj = require('bfj');
 const webpack = require('webpack');
+//////------ add by nutsjian
+// 这里会引入 webpack.config
+// 查看 configFactory 哪里使用，在下面的代码中：
+// const config = configFactory("production");
+// 上述这句代码很明显了，调用 webpack 传环境变量，这里是 "production"。
+// 使用 inquirer 动态传参
+const inquirer = require('inquirer');
+const Const = require("../config/const");
 const configFactory = require('../config/webpack.config');
 const paths = require('../config/paths');
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
@@ -64,92 +72,131 @@ const argv = process.argv.slice(2);
 const writeStatsJson = argv.indexOf('--stats') !== -1;
 
 // Generate configuration
-const config = configFactory('production');
-
-// We require that you explicitly set browsers and do not fall back to
-// browserslist defaults.
 const { checkBrowsers } = require('react-dev-utils/browsersHelper');
-checkBrowsers(paths.appPath, isInteractive)
-  .then(() => {
-    // First, read the current file sizes in build directory.
-    // This lets us display how much they changed later.
-    return measureFileSizesBeforeBuild(paths.appBuild);
-  })
-  .then(previousFileSizes => {
-    // Remove all content but keep the directory so that
-    // if you're in it, you don't end up in Trash
-    fs.emptyDirSync(paths.appBuild);
-    // Merge with the public folder
-    copyPublicFolder();
-    // Start the webpack build
-    return build(previousFileSizes);
-  })
-  .then(
-    ({ stats, previousFileSizes, warnings }) => {
-      if (warnings.length) {
-        console.log(chalk.yellow('Compiled with warnings.\n'));
-        console.log(warnings.join('\n\n'));
-        console.log(
-          '\nSearch for the ' +
-            chalk.underline(chalk.yellow('keywords')) +
-            ' to learn more about each warning.'
-        );
-        console.log(
-          'To ignore, add ' +
-            chalk.cyan('// eslint-disable-next-line') +
-            ' to the line before.\n'
-        );
-      } else {
-        console.log(chalk.green('Compiled successfully.\n'));
+//////------ add by nutsjian
+let config = {};
+// const config = configFactory('production');
+
+const before = async () => {
+  // const Const = [
+  //   {
+  //     name: "release",
+  //     title: "测试环境"
+  //   },
+  //   {
+  //     name: "production",
+  //     title: "正式环境"
+  //   }
+  // ];
+  const result = await inquirer.prompt({
+    type: "list",
+    name: "env",
+    message: "请选择 build 环境",
+    filter: title => {
+      let name = title;
+      for (let i = 0; i < Const.env.length; i++) {
+        if (Const.env[i].title === title) {
+          name = Const.env[i].name;
+          break;
+        }
       }
-
-      console.log('File sizes after gzip:\n');
-      printFileSizesAfterBuild(
-        stats,
-        previousFileSizes,
-        paths.appBuild,
-        WARN_AFTER_BUNDLE_GZIP_SIZE,
-        WARN_AFTER_CHUNK_GZIP_SIZE
-      );
-      console.log();
-
-      const appPackage = require(paths.appPackageJson);
-      const publicUrl = paths.publicUrlOrPath;
-      const publicPath = config.output.publicPath;
-      const buildFolder = path.relative(process.cwd(), paths.appBuild);
-      printHostingInstructions(
-        appPackage,
-        publicUrl,
-        publicPath,
-        buildFolder,
-        useYarn
-      );
+      return name;
     },
-    err => {
-      const tscCompileOnError = process.env.TSC_COMPILE_ON_ERROR === 'true';
-      if (tscCompileOnError) {
-        console.log(
-          chalk.yellow(
-            'Compiled with the following type errors (you may want to check these before deploying your app):\n'
-          )
-        );
-        printBuildError(err);
-      } else {
-        console.log(chalk.red('Failed to compile.\n'));
-        printBuildError(err);
-        process.exit(1);
-      }
-    }
-  )
-  .catch(err => {
-    if (err && err.message) {
-      console.log(err.message);
-    }
-    process.exit(1);
+    choices: Const.env.map(item => item.title)
   });
+  const env = await result.env;
+  console.log("构建环境参数是 => " + env);
+  config = configFactory(env);
+  // We require that you explicitly set browsers and do not fall back to
+  // browserslist defaults.
+  await checkBrowsers(paths.appPath, isInteractive)
+    .then(() => {
+      // First, read the current file sizes in build directory.
+      // This lets us display how much they changed later.
+      return measureFileSizesBeforeBuild(paths.appBuild);
+    })
+    .then(previousFileSizes => {
+      // Remove all content but keep the directory so that
+      // if you're in it, you don't end up in Trash
+      fs.emptyDirSync(paths.appBuild);
+      // Merge with the public folder
+      copyPublicFolder();
+      // Start the webpack build
+      return build(previousFileSizes);
+    })
+    .then(
+      ({ stats, previousFileSizes, warnings }) => {
+        if (warnings.length) {
+          console.log(chalk.yellow('Compiled with warnings.\n'));
+          console.log(warnings.join('\n\n'));
+          console.log(
+            '\nSearch for the ' +
+              chalk.underline(chalk.yellow('keywords')) +
+              ' to learn more about each warning.'
+          );
+          console.log(
+            'To ignore, add ' +
+              chalk.cyan('// eslint-disable-next-line') +
+              ' to the line before.\n'
+          );
+        } else {
+          console.log(chalk.green('Compiled successfully.\n'));
+        }
+
+        console.log('File sizes after gzip:\n');
+        printFileSizesAfterBuild(
+          stats,
+          previousFileSizes,
+          paths.appBuild,
+          WARN_AFTER_BUNDLE_GZIP_SIZE,
+          WARN_AFTER_CHUNK_GZIP_SIZE
+        );
+        console.log();
+
+        const appPackage = require(paths.appPackageJson);
+        const publicUrl = paths.publicUrlOrPath;
+        const publicPath = config.output.publicPath;
+        const buildFolder = path.relative(process.cwd(), paths.appBuild);
+        printHostingInstructions(
+          appPackage,
+          publicUrl,
+          publicPath,
+          buildFolder,
+          useYarn
+        );
+      },
+      err => {
+        const tscCompileOnError = process.env.TSC_COMPILE_ON_ERROR === 'true';
+        if (tscCompileOnError) {
+          console.log(
+            chalk.yellow(
+              'Compiled with the following type errors (you may want to check these before deploying your app):\n'
+            )
+          );
+          printBuildError(err);
+        } else {
+          console.log(chalk.red('Failed to compile.\n'));
+          printBuildError(err);
+          process.exit(1);
+        }
+      }
+    )
+    .catch(err => {
+      if (err && err.message) {
+        console.log(err.message);
+      }
+      process.exit(1);
+    });
+}
+
+before();
 
 // Create the production build and print the deployment instructions.
-function build(previousFileSizes) {
+// 开始打包
+async function build(previousFileSizes) {
+  // 我们曾经支持根据“NODE_PATH”解析模块.
+  // 现在它已经被弃用，取而代之的是jsconfig/tsconfig.json
+  // 这使您可以在大型的monorepos中使用绝对路径
   console.log('Creating an optimized production build...');
 
   const compiler = webpack(config);
@@ -220,6 +267,7 @@ function build(previousFileSizes) {
   });
 }
 
+// 拷贝除了 html 以外 public 里的文件，放到打包文件里
 function copyPublicFolder() {
   fs.copySync(paths.appPublic, paths.appBuild, {
     dereference: true,
