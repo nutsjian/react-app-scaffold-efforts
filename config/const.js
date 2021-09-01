@@ -33,8 +33,8 @@ module.exports = {
   },
   domain: {
     // 服务器地址
-    release: "https://react-hook-q1.com/",
-    production: "https://react-hook.com/"
+    release: "https://react-app-scaffold-efforts-release.com/",
+    production: "https://react-app-scaffold-efforts-production.com/"
   },
   apiUrl: {
     global: "/api/v1/global",

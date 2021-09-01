@@ -103,7 +103,7 @@ module.exports = function (webpackEnv) {
   // 做好了这里，我们就思考 webpackEnv 从哪来的，在哪传参的？
   // 在 scripts/build.js 中找到
   paths.appBuild = paths.appBuild + "/" + webpackEnv;
-
+  console.log(paths.appBuild, "1111111111111111111111111111111111");
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command
   // 用于生产环境中启用分析的变量
@@ -111,15 +111,34 @@ module.exports = function (webpackEnv) {
   const isEnvProductionProfile =
     isEnvProduction && process.argv.includes('--profile');
 
+  // Webpack使用“publicPath”来确定应用程序的服务来源.
+  // 它需要一个结尾的斜杠，否则文件资产将得到一个不正确的路径.
+  // 在发展中，我们始终从根本上服务。这使配置更容易。
+  // 下面演示cdn上传动态生成html内的路径
+  const publicPath = isEnvProduction
+    ? consts["domain"][webpackEnv] + consts["projectName"]
+    : isEnvDevelopment && "/";
+  // 有些应用程序不使用带有pushState的客户端路由。
+  // 对于这些，“主页”可以设置为“。”来启用相关的资产路径。
+  const shouldUseRelativeAssetPaths = publicPath === "./";
+
+  const publicUrl = isEnvProduction
+    ? publicPath.slice(0, -1)
+    : isEnvDevelopment && "";
+
   // We will provide `paths.publicUrlOrPath` to our app
   // as %PUBLIC_URL% in `index.html` and `process.env.PUBLIC_URL` in JavaScript.
   // Omit trailing slash as %PUBLIC_URL%/xyz looks better than %PUBLIC_URL%xyz.
   // Get environment variables to inject into our app.
-  const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
+  // 让环境变量注入我们的应用程序.
+  // const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
+
+  const env = getClientEnvironment(publicUrl);
 
   const shouldUseReactRefresh = env.raw.FAST_REFRESH;
 
   // common function to get style loaders
+  // 获取样式加载器的公共函数
   const getStyleLoaders = (cssOptions, preProcessor) => {
     const loaders = [
       isEnvDevelopment && require.resolve('style-loader'),
@@ -139,6 +158,9 @@ module.exports = function (webpackEnv) {
         // Options for PostCSS as we reference these options twice
         // Adds vendor prefixing based on your specified browser support in
         // package.json
+        // PostCSS的选项，因为我们引用这些选项两次
+        // 根据指定的浏览器支持添加厂商前缀
+        // package.json
         loader: require.resolve('postcss-loader'),
         options: {
           // Necessary for external CSS imports to work
@@ -155,9 +177,13 @@ module.exports = function (webpackEnv) {
             // Adds PostCSS Normalize as the reset css with default options,
             // so that it honors browserslist config in package.json
             // which in turn let's users customize the target behavior as per their needs.
+            // 添加PostCSS Normalize作为带有默认选项的重置css，
+            // 以便它在package.json中显示browserslist config
+            // 这反过来又让用户根据自己的需要定制目标行为。
             postcssNormalize(),
           ],
-          sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment,
+          sourceMap: isEnvProduction && shouldUseSourceMap
+          // sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment,
         },
       },
     ].filter(Boolean);
@@ -184,6 +210,7 @@ module.exports = function (webpackEnv) {
   return {
     mode: isEnvProduction ? 'production' : isEnvDevelopment && 'development',
     // Stop compilation early in production
+    // 在生产环境中尽早停止编译
     bail: isEnvProduction,
     devtool: isEnvProduction
       ? shouldUseSourceMap
@@ -192,6 +219,7 @@ module.exports = function (webpackEnv) {
       : isEnvDevelopment && 'cheap-module-source-map',
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
+    // 入口
     entry:
       isEnvDevelopment && !shouldUseReactRefresh
         ? [

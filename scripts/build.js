@@ -105,8 +105,13 @@ const before = async () => {
     choices: Const.env.map(item => item.title)
   });
   const env = await result.env;
+  const Domain = await `${Const.domain[result.env]}`;
   console.log("构建环境参数是 => " + env);
-  config = configFactory(env);
+  // config = configFactory(env);
+  //CDN的项目文件路径获取
+  config = await configFactory(env, `${Domain}${Const.projectName}`);
+  console.log(chalk.yellow("config：", env, Domain, Const.projectName));
+
   // We require that you explicitly set browsers and do not fall back to
   // browserslist defaults.
   await checkBrowsers(paths.appPath, isInteractive)
